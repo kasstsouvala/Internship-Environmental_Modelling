@@ -1,9 +1,11 @@
-######################
-#dbname="greece_test"#
-######################
+##########################
+# Connect R with TerraLib #
+#         and            #
+# Visualise in TerraView #
+##########################
 
 library(sp)
-require(aRT)
+require(aRT) #The aRT package provides a direct runtime link of R to TerraLib DB storing and visualizing data in TerraView
 
 # Set work directory where shape files are saved
 setwd("C:\\Users\\...")  #Set Work Directory, note / instead of \ in windows 
