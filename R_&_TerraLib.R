@@ -1,0 +1,553 @@
+######################
+#dbname="greece_test"#
+######################
+
+library(sp)
+require(aRT)
+
+# Set work directory where shape files are saved
+setwd("C:\\Users\\...")  #Set Work Directory, note / instead of \ in windows 
+
+# DataBase connection
+con=openConn(user = "root", host = "localhost", pass = "your_pass", dbms= "mysql")
+con 
+
+#OPEN specific DB 
+db = openDb(con, "greece_test")
+
+#Delete and create a DB
+#dbname="greece_test"
+
+#if(any(showDbs(con)==dbname))
+ # deleteDb(con, dbname, force=T)
+
+#db=createDb(con,db=dbname)
+#db
+
+#######################
+#1.ShapeFile: basinshp#
+#######################
+l1=createLayer(db, "basinshp")
+addShape(l1, tab="basinshp", file="basinshp.shp", ID="ID_l1") # K: ids = getID(pols)
+l1
+
+getPolygons(l1)->pols1
+
+ids1 = getID(pols1)
+ids1
+
+colors=terrain.colors(10)
+plot(pols1,col=colors[1])
+
+v = visualPolygons(color="blue", transp=80, ccolor="black")
+t = createTheme(l1, "basinshp",view="Data")
+setVisual(t, v)
+
+##################
+#2.ShapeFile: box#
+##################
+l2=createLayer(db, "box")
+addShape(l2, tab="box", file="box.shp", ID="ID_l2") # K: ids = getID(pols)
+l2
+
+getPolygons(l2)->pols2
+
+ids2 = getID(pols2)
+ids2
+
+colors=terrain.colors(14)
+plot(pols2,col=colors[8])
+
+v = visualPolygons(color="blue", transp=80, ccolor="black")
+t = createTheme(l2, "box",view="Data")
+setVisual(t, v)
+
+#######################
+#3.ShapeFile: geologia#
+#######################
+l3=createLayer(db, "geologia")
+addShape(l3, tab="geologia", file="geologia.shp", ID="ID_l3") # K: ids = getID(pols)
+l3
+
+getPolygons(l3)->pols3
+
+ids3 = getID(pols3)
+ids3
+
+colors=terrain.colors(10)
+plot(pols3,col=colors[1])
+
+v = visualPolygons(color="blue", transp=80, ccolor="black")
+t = createTheme(l3, "geologia",view="Data")
+setVisual(t, v)
+
+
+############
+# LAND USE #
+#  Corine  #
+############
+#4.ShapeFile: corine
+l4=createLayer(db, "corine")
+addShape(l4, tab="corine", file="corine.shp", ID="ID_l4")
+l4
+
+getPolygons(l4)->pols4
+pols4@bbox
+
+ids4 = getID(pols4)
+ids4
+
+colors=terrain.colors(10)
+plot(pols4,col=colors[1])
+
+v4 = visualPolygons(color="blue", transp=80, ccolor="black")
+t4 = createTheme(l4, "corine",view="Data")
+setVisual(t4, v4)
+
+tab4 = openTable(l4,"corine")
+tdata4 <- getData(tab4) 
+
+pols4[1]
+
+#Create table "codes" with columns "id", "codes" of polygons
+library(maptools)
+ra<- readShapeSpatial("corine.shp", delete_null_obj = TRUE)
+ra@data$COR[1]
+tdata4$object_id_1[1]
+codes<-ra@data$COR
+id<-tdata4$object_id_4
+codes<-data.frame(id, codes) # color
+codes
+names(codes)
+
+#setwd("C:\\Users\\LandUse") 
+#codes<-read.table("codes_LandUse.csv", sep=",", header=T)
+
+#Give color to polygons based on Corine codes 
+i=1
+for(i in 1:134) {
+  if (codes$codes[i]==243)
+  {
+    codes$General_Land_Use[i]= "Arable_land"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="yellow",add=TRUE)
+  } 
+  if (codes$codes[i]==313)
+  {
+    codes$General_Land_Use[i]= "Forest"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="darkgreen",add=TRUE)
+  } 
+  if (codes$codes[i]==333)
+  {
+    codes$General_Land_Use[i]= "Grassland"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="green",add=TRUE)
+  } 
+  if (codes$codes[i]==321)
+  {
+    codes$General_Land_Use[i]= "Grassland"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="green",add=TRUE)
+  } 
+  if (codes$codes[i]==322)
+  {
+    codes$General_Land_Use[i]= "Grassland"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="green",add=TRUE)
+  }
+  if (codes$codes[i]==323)
+  {
+    codes$General_Land_Use[i]= "Grassland"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="green",add=TRUE)
+  }
+  if (codes$codes[i]==324)
+  {
+    codes$General_Land_Use[i]= "Grassland"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="green",add=TRUE)
+  }
+  if (codes$codes[i]==242)
+  {
+    codes$General_Land_Use[i]= "Heterogenous_crops"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="darkolivegreen3",add=TRUE)
+  }
+  if (codes$codes[i]==312)
+  {
+    codes$General_Land_Use[i]= "Forest"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="darkgreen",add=TRUE)
+  }
+  if (codes$codes[i]==244)
+  {
+    codes$General_Land_Use[i]= "Arable_land"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="yellow",add=TRUE)
+  }
+  if (codes$codes[i]==221)
+  {
+    codes$General_Land_Use[i]= "Permanent_Crops"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="darkolivegreen4",add=TRUE)
+  }
+  if (codes$codes[i]==112)
+  {
+    codes$General_Land_Use[i]= "Urban_area"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="red",add=TRUE)
+  }
+  if (codes$codes[i]==222)
+  {
+    codes$General_Land_Use[i]= "Permanent_Crops"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="darkolivegreen4",add=TRUE)
+  }
+  if (codes$codes[i]==223)
+  {
+    codes$General_Land_Use[i]= "Permanent_Crops"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="darkolivegreen4",add=TRUE)
+  }
+  if (codes$codes[i]==331)
+  {
+    codes$General_Land_Use[i]= "Grassland"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="green",add=TRUE)
+  }
+  if (codes$codes[i]==512)
+  {
+    codes$General_Land_Use[i]= "Water_body"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="blue",add=TRUE)
+  }
+  if (codes$codes[i]==332)
+  {
+    codes$General_Land_Use[i]= "Grassland"
+    plot(pols4 [which(tdata4$object_id_1==i),],lwd=0.05, col="green",add=TRUE)
+  }
+  i=i+1
+}
+
+
+#Mark Points and Numbers to each polygon
+#Centroid Points & ID Text
+#centroids <- getOperation(l4, "centroid")
+#centroids
+#centroids@coords
+#points(centroids, pch=20)
+#text(centroids@coords[,1], centroids@coords[,2], getID(l4), pos=3, cex=0.75) 
+
+### Export table "codes" data to .csv file ##
+#setwd("C:\\Users\\LandUse")  #Set Work Directory, note / instead of \ in windows 
+
+#write.csv(codes, file = "codes_LandUse.csv")
+#write.table(codes, "C:\\codes_LandUse.txt", sep="\t") 
+
+#codes<-read.table("codes_LandUse.csv", sep=",", header=T)
+#head(codes)
+
+###################################
+#Create Themes of colored land use#
+###################################
+opers1=createLayer(db, "Forest")
+oper1=getSetOperation(l4, "union",ID=c("3","4","11","10","30","58","78","117","128","131","132","133","121"))
+col1<-addPolygons(opers1, oper1)
+v1= visualPolygons(color="darkgreen", transp=80, ccolor="black")
+th1=createTheme(opers1, "Forest", view="Land_colors")
+setVisual(th1,v1)
+
+opers2=createLayer(db, "Arable_land")
+oper2=getSetOperation(l4, "union",ID=c("1","7","8","9","17","18","23","32","43","45","56","65","70","73","94","120","124","59"))
+col2<-addPolygons(opers2, oper2)
+v2= visualPolygons(color="yellow", transp=80, ccolor="black")
+th2=createTheme(opers2, "Arable_land",view="Land_colors")
+setVisual(th2, v2)
+
+opers3=createLayer(db, "Water_body")
+oper3=getSetOperation(l4, "union",ID=c("68"))
+col3<-addPolygons(opers3, oper3)
+v3= visualPolygons(color="blue", transp=80, ccolor="black")
+th3=createTheme(opers3, "Water_body",view="Land_colors")
+setVisual(th3, v3)
+
+opers4=createLayer(db, "Permanent_Crops")
+oper4=getSetOperation(l4, "union",ID=c("2","6","13","29","47","50","53","97","25"))
+col4<-addPolygons(opers4, oper4)
+v4= visualPolygons(color="lightgreen", transp=80, ccolor="black")
+th4=createTheme(opers4, "Permanent_Crops",view="Land_colors")
+setVisual(th4, v4)
+
+opers5=createLayer(db, "Heterogenous_crops")
+oper5=getSetOperation(l4, "union",ID=c("12","14","16","37"))
+col5<-addPolygons(opers5, oper5)
+v5= visualPolygons(color="lightgreen", transp=80, ccolor="black")
+th5=createTheme(opers5, "Heterogenous_crops",view="Land_colors")
+setVisual(th5, v5)
+
+opers6=createLayer(db, "Grassland")
+oper6=getSetOperation(l4, "union",ID=c("19","5","20","21","22","24","26","27","28","31","33","34","35","36","38","39","40","41","42","44","46","48","49","51","52","54","55","57","60","61","62","63","64","66","67","69","71","72","74","75","76","77","79","80","81","82","83","84","85","86","87","88","89","90","91","92","93","95","96","98","99","100","101","102","103","104","105","106","107","108","109","110","111","112","113","114","115","116","118","119","122","123","125","126","127","129","134"))
+col6<-addPolygons(opers6, oper6)
+v6= visualPolygons(color="green", transp=80, ccolor="black")
+th6=createTheme(opers6, "Grassland",view="Land_colors")
+setVisual(th6, v6)
+
+opers7=createLayer(db, "Urban_area")
+oper7=getSetOperation(l4, "union",ID=c("15","130"))
+col7<-addPolygons(opers7, oper7)
+v7= visualPolygons(color="red", transp=80, ccolor="black")
+th7=createTheme(opers7, "Urban_area",view="Land_colors")
+setVisual(th7, v7)
+
+##########################################
+#Create column with att: General_Land_Use#
+#       Theme->view->corine              #
+##########################################
+ID = getID(l4)
+names(codes)
+General_Land_Use<-c(codes$General_Land_Use)
+df = data.frame(ID, General_Land_Use)
+tstatic = createTable(l4, "General_Land_Use")
+tstatic
+updateColumns(tstatic, df)
+getData(tstatic)
+
+#######################
+#Create cells and fill#
+#######################
+lcells_corine = createLayer(l4, "cells_corine", rx=500, all=TRUE)
+tcells_corine = createTheme(lcells_corine, "cells_corine",view="cells")
+
+table_cells_corine = openTable(lcells_corine,"cells_corine")
+table_cells_corine
+table_cells_corine_data <- getData(table_cells_corine ) 
+
+createAndFillColumn(table_cells_corine, "Land_use", t4, att="COR",   strat="....") #???
+
+#######################
+#5.ShapeFile: limits_l#
+#######################
+l5=createLayer(db, "limits_l")
+addShape(l5, tab="limits_l", file="limits_l.shp", ID="ID_l5") # K: ids = getID(pols)
+l5
+
+getLines(l5)->lines5
+
+ids5 = getID(lines5)
+ids5
+
+colors=terrain.colors(1)
+plot(lines5,col=colors[1])
+
+v = visualPolygons(color="red", transp=80, ccolor="black")
+t = createTheme(l5, "limits_l",view="Data")
+setVisual(t, v)
+
+##########################
+#6.ShapeFile: limits_line#
+##########################
+l6=createLayer(db, "limits_line")
+addShape(l6, tab="limits_line", file="limits_line.shp", ID="ID_l6") # K: ids = getID(pols)
+l6
+
+getLines(l6)->lines6
+
+ids6 = getID(lines6)
+ids6
+
+colors=terrain.colors(1)
+plot(lines6,col=colors[1])
+
+v = visualPolygons(color="black", transp=80, ccolor="black")
+t = createTheme(l6, "limits_line",view="Data")
+setVisual(t, v)
+
+#######################
+#7.ShapeFile: limits_p#
+#######################
+l7=createLayer(db, "limits_p")
+addShape(l7, tab="limits_p", file="limits_p.shp", ID="ID_l7") # K: ids = getID(pols)
+l7
+
+getPolygons(l7)->pols7
+
+ids7 = getID(pols7)
+ids7
+
+colors=terrain.colors(1)
+plot(pols7,col=colors[1])
+
+v = visualPolygons(color="blue", transp=80, ccolor="black")
+t = createTheme(l7, "limits_p",view="Data")
+setVisual(t, v)
+
+##########################
+#8.ShapeFile: limits_poly#
+##########################
+l8=createLayer(db, "limits_poly")
+addShape(l8, tab="limits_poly", file="limits_poly.shp", ID="ID_l8") # K: ids = getID(pols)
+l8
+
+getPolygons(l8)->pols8
+
+ids8 = getID(pols8)
+ids8
+
+colors=terrain.colors(1)
+plot(pols8,col=colors[1])
+
+v = visualPolygons(color="green", transp=80, ccolor="black")
+t = createTheme(l8, "limits_poly",view="Data")
+setVisual(t, v)
+
+####################
+#9.ShapeFile: rails#
+####################
+l9=createLayer(db, "rails")
+addShape(l9, tab="rails", file="rails.shp", ID="ID_l9") # K: ids = getID(pols)
+l9
+
+getLines(l9)->lines9
+
+ids9 = getID(lines9)
+ids9
+
+colors=terrain.colors(1)
+plot(lines9,col=colors[1])
+
+v = visualPolygons(color="blue", transp=80, ccolor="black")
+t = createTheme(l9, "rails",view="Data")
+setVisual(t, v)
+
+#####################
+#10.ShapeFile: river#
+#####################
+l10=createLayer(db, "river")
+addShape(l10, tab="river", file="river.shp", ID="ID_l10") # K: ids = getID(pols)
+l10
+
+getLines(l10)->lines10
+
+ids10 = getID(lines10)
+ids10
+
+colors=terrain.colors(1)
+plot(lines10,col=colors[1])
+
+v = visualPolygons(color="blue", transp=80, ccolor="black")
+t = createTheme(l10, "river",view="Data")
+setVisual(t, v)
+
+#####################
+#11.ShapeFile: roads#
+#####################
+l11=createLayer(db, "roads")
+addShape(l11, tab="roads", file="roads.shp", ID="ID_l11") # K: ids = getID(pols)
+l11
+
+getLines(l11)->lines11
+
+ids11 = getID(lines11)
+ids11
+
+colors=terrain.colors(1)
+plot(lines11,col=colors[1])
+
+v = visualPolygons(color="blue", transp=80, ccolor="black")
+t = createTheme(l11, "roads",view="Data")
+setVisual(t, v)
+
+#####################
+#12.ShapeFile: towns#
+#####################
+#proj="+proj=poly" #Projection Datum: "WGS84": a=6378160.0 + f=0.003353"
+l12=createLayer(db, "towns")
+
+
+addShape(l12, tab="towns", file="towns.shp", ID="ID_l12") # K: ids = getID(pols)
+l12
+
+getPoints(l12)->lines12
+
+ids12 = getID(lines12)
+ids12
+
+colors=terrain.colors(1)
+plot(lines12,col=colors[1])
+
+v = visualPolygons(color="blue", transp=80, ccolor="black")
+t = createTheme(l12, "towns",view="Data")
+setVisual(t, v)
+
+#######################
+#13.ShapeFile: tsivlos#
+#######################
+l13=createLayer(db, "tsivlos")
+addShape(l13, tab="tsivlos", file="tsivlos.shp", ID="ID_l13") # K: ids = getID(pols)
+l13
+
+getPolygons(l13)->pols13
+
+ids13 = getID(pols13)
+ids13
+
+colors=terrain.colors(1)
+plot(pols13,col=colors[1])
+
+v = visualPolygons(color="blue", transp=80, ccolor="black")
+t = createTheme(l13, "tsivlos",view="Data")
+setVisual(t, v)
+
+
+####################
+#Shape file        #
+#contour lines data#
+####################
+l1=createLayer(db, "contour")
+addShape(l1, tab="contour", file="contour.shp", ID="ID_l1") # K: ids = getID(pols)
+l1
+
+getLines(l1)->lines1
+
+ids1 = getID(lines1)
+ids1
+
+colors=terrain.colors(2)
+plot(lines1,col=colors[1])
+
+v1 = visualPolygons(color="blue", transp=80, ccolor="black")
+t1 = createTheme(l1, "contour",view="Data")
+setVisual(t1, v1)
+
+
+########################
+# Digital Terrain Model#
+#  Import .TIF of DTM  #
+#     Of ARCGIS        #
+########################
+#TerraView->Raster import...!!!
+
+#Find the bbox of a shape file
+#library(maptools)
+#dir()
+shape=readShapeLines("contour.shp")
+#str(shape)
+bbox(shape)
+
+db = openDb(con, "greece_test")
+db
+
+lay = openLayer(db, "DTM_Arc")
+the = openTheme(lay, "DTM_Arc")
+#We don't use (rx = 50, ry=50) as it takes long time
+lcells= createLayer(lay, "cells", rx=500, all=TRUE) 
+lcells
+
+tcells = openTable(lcells, "cells")
+tcells
+
+#createAndFillColumn
+createAndFillColumn(tcells, newatt = "average", target = lay, geometry="raster", strategy="average")
+
+
+theme = createTheme(lcells, "cells_DTM" ,view="cells")
+
+##average for raster:
+c=(colors=terrain.colors(7))
+visual=visualPolygons(c)
+setVisual(theme, visual, attribute="average", mode="equalsteps")
+
+#After that, see the results in TerraView. In any case, please add
+
+aRTsilent(FALSE)
+
+require(aRT)
+
+
+
+
