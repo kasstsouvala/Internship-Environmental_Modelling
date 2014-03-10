@@ -1,0 +1,123 @@
+************************************
+#Interpolation of precipitation data
+************************************
+  
+library(gstat)
+library(sp)
+library(rgdal)
+library(maptools)
+library(gstat)
+library(sp)
+
+setwd("C:\\")
+
+data_mth <- read.csv("jan03_R.csv", header=TRUE)
+head(data_mth)
+data_mth
+str(data_mth)
+
+******************
+#Ordinary kriging
+******************
+#1. GRID
+coordinates(data_mth)=~lon+lat
+str(data_mth) #the data object has been transformed from data.frame to SpatialPointsDataFrame
+
+#Set the coordinate system. In our case "GCS_WGS_1984"
+proj4string(data_mth)=CRS("+proj=longlat +datum=WGS84")
+data_mth = spTransform(data_mth,CRS("+proj=longlat +datum=WGS84"))##the epsg numbers can be found here: http://spatialreference.org/ref/
+
+#import Greek area border from ESRI shape file
+setwd("C:\\")
+border<-readOGR("GRC_adm0.shp","GRC_adm0")
+str(border)
+
+#Create a prediction grid for the interpolation, starting from the shape file
+vals <- border@bbox
+deltaLong <- as.integer((vals[1,2] - vals[1,1]) + 0.5)
+deltaLat <- as.integer((vals[2,2] - vals[2,1]) + 0.5)
+gridRes <-0.1  #change this value to change the grid size (in metres) # 
+gridSizeX <- deltaLong / gridRes
+gridSizeY <- deltaLat / gridRes
+grd <- GridTopology(vals[,1],c(gridRes,gridRes),c(gridSizeX,gridSizeY))
+grd
+
+pts <- SpatialPoints(coordinates(grd))
+pts1 <- SpatialPointsDataFrame(as.data.frame(pts), data=as.data.frame(rep(1,nrow(as.data.frame(pts)))))
+
+Overlay=overlay(pts1,border) 
+
+pts1$border=Overlay
+nona<-na.exclude(as.data.frame(pts1))
+coordinates(nona)=~x+y
+gridded(nona) <- TRUE
+proj4string(nona)=CRS("+proj=longlat +datum=WGS84 ")  #set the coordinate system also for the prediction grid
+#writeAsciiGrid(nona,"prediction_grid.asc")
+
+##See how our grid looks like
+plot(nona, cex=0.5)
+points(data_mth, pch=1, col='red', cex=0.4)
+title("Interpolation Grid and Sample Points")
+
+data_grid <- as(nona,'SpatialGridDataFrame')  
+
+
+#2. Variogram 
+show.vgms() 
+#vgm()
+v<-(variogram(rain_mm~1,data_mth))
+plot(v)
+
+v.fit <-fit.variogram(v, vgm(1, "Pow",0.6, 0)) #Lin #Gau #Pow #Check rain_mm values range
+
+plot(variogram(rain_mm~1,data_mth),v.fit,main="Variogram Lin")
+rr.ok <- krige(rain_mm~1, data_mth, nona, v.fit)
+
+#validation
+kcv <- krige.cv(rain_mm~1,data_mth, model = v.fit, nfold = 2)
+head(kcv)
+
+#3. Ordinary Kriging
+map<-krige(rain_mm~1,data_mth,v.fit,newdata=nona)
+spplot(map,"var1.pred",col.regions=terrain.colors(50),main="June 2003")
+
+#Export like raster
+rs = raster(map)
+projection(rs) = CRS("+proj=longlat +datum=WGS84")
+hasValues(rs)
+res(rs)
+dim(rs)
+xmax(rs)
+ymin(rs)
+plot(rs,main="raster")
+
+setwd("C:\\")
+
+#http://cran.r-project.org/web/packages/raster/vignettes/Raster.pdf
+writeRaster(rs,"rr200301.tif")
+#writeRaster(rs,"data012003.tif", overwrite=TRUE)
+
+
+#Change resolution
+#http://stackoverflow.com/questions/9542039/resolution-values-for-rasters-in-r
+#library("raster")
+
+
+#setwd("C:\\")
+#data_mth <- read.csv("jan03_R.csv", header=TRUE)
+#head(data_mth)
+
+#data<-matrix(c(data_mth$lon, data_mth$lat),ncol=2)
+#xtll=SpatialPoints(data,CRS("+proj=longlat +datum=WGS84"))
+#a<-spTransform(xtll,CRS("+proj=utm +zone=34 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 "))
+#head(a)
+#max_coord_x1<-max(a$coords.x1)
+#min_coord_x1<-min(a$coords.x1)
+#max_coord_x2<-max(a$coords.x2)
+#min_coord_x2<-min(a$coords.x2)
+
+#ext = extent(min_coord_x1,max_coord_x1,min_coord_x2,max_coord_x2)
+#length(min_coord_x1:max_coord_x1)
+#length(min_coord_x2:max_coord_x2)
+
+#r = raster(map,ncol=415,nrow=421,crs="+proj=longlat +datum=WGS84")
