@@ -1,0 +1,49 @@
+***************************************************
+#Correlation coefficient of elevation-precipitation
+***************************************************
+library(gstat)
+library(sp)
+setwd("C:\\")
+
+data_mth <- read.csv("jan03_R.csv", header=TRUE)
+head(data_mth)
+
+library(lattice)
+coordinates(data_mth) <- c("lon", "lat")
+spplot(data_mth, "rain_mm", do.log = T)
+bubble(data_mth, "rain_mm", do.log = T, key.space = "bottom")
+
+#elevation Data
+#TIFF download site: http://srtm.csi.cgiar.org/SELECTION/inputCoord.asp
+#Merge in ArcGIS: http://www.youtube.com/watch?v=GfPSD39MnC4
+library(raster)
+setwd("C:\\")
+x <- raster("Greece_Elev.tif")
+
+plot(x)
+y<-coordinates(data_mth)
+extr<-extract(x, y, method='simple', buffer=NULL, small=FALSE, cellnumbers=FALSE, 
+              fun=NULL, na.rm=TRUE, layer, nl, df=FALSE, factors=FALSE)
+
+#Create table with correlated data
+corelationData<-0
+corelationData$rain<-data_mth$rain_mm
+corelationData$elevation<-extr
+mat <- matrix(c(corelationData$rain,corelationData$elevation),ncol=2)
+
+mat.df <- na.omit(mat)
+
+mat.df <- as.data.frame(mat.df)
+colnames(mat.df, do.NULL = FALSE)
+colnames(mat.df) <- c("rain","elevation") #change columns names
+colnames(mat.df)
+mat.df
+head(mat.df)
+
+#Correlation coefficient
+rain = mat.df$rain   # the rain values 
+elevation = mat.df$elevation      # the elevation values 
+cor(rain, elevation)          
+# Goovaerts/Journal of Hydrology 228 (2000):  ordinary kriging which
+#ignores elevation is in fact better than linear regression when 
+#the correlation is smaller than 0.75
