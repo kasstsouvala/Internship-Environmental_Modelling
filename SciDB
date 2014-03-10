@@ -1,0 +1,319 @@
+*****************************
+#Upgrade of the SciDB library
+*****************************
+#https://github.com/Paradigm4/SciDBR/blob/master/README
+#setwd("C:\\Users\\...\\Documents\\R\\win-library\\2.15\\scidb\\libs\\i386\\scidb.dll") #... = user's folder
+#install.packages('devtools', type='source', repos=NULL)
+#library("devtools")
+#install_github("SciDBR","Paradigm4")
+#BLISS R - Use of the data in an array
+#library("scidb")
+#library(iterators)
+****************************
+  
+  
+library(scidb)
+library(sp)
+# 0 - Load the functions below, under UTIL
+#ddToWgs84grid25
+#Wgs84grid25Todd
+#dateInt2tInd
+#bliss2date
+
+#*******************************************************************
+#Retrieve some data and plot a map
+#*******************************************************************
+#Data retrieved from the site: http://eca.knmi.nl/download/ensembles/download.php 
+
+# 1 - Connect to SciDB
+scidbconnect(host = "host", port = port)
+
+
+# 2 - Build a query interval (Greece)
+#http://www.mapsofworld.com/world-maps/world-map-with-latitude-and-longitude.html
+fromDate <- "2003-01-01"
+toDate <- "2003-01-31"
+minX <- 20 # Longitude in decimal degrees 
+maxX <- 27#E
+minY <- 35# Latitude in decimal degrees
+maxY <- 42#N
+
+
+# 3 - Transform lon/lat boundaries to indexes (This needs the functions below UTIL)
+ll <- unlist(ddToWgs84grid25(minX, minY))#Lower left
+ur <- unlist(ddToWgs84grid25(maxX, maxY))#Upper right
+tInt <- dateInt2tInd(fromDate, toDate)# Time interval
+
+# 4 - Retrieve some rain data from SciDB to R (as an R's data frame)
+arrayname <- "rr" # For TEMPERATURE: arrayname <- "tg"
+rrsdb <- scidb(arrayname)# Reference to SciDB's array
+gd <- rrsdb[ll[1]:ur[1], ll[2]:ur[2], tInt[1]:tInt[length(tInt)]][]#Filter the SciDB array and brings the data to R - Does gd look like Greece?
+
+# 5 - Re-arrange as a single dimmension array
+gdv <- as.vector(gd)
+d <- replace(gdv, gdv == -9999, NA)
+xInd <- rep(rep(seq(from = ll[1], to = ur[1]), times = length(ll[2]:ur[2])), times = length(tInt))
+yInd <- rep(rep(ll[2]:ur[2], each = length(ll[1]:ur[1])), times = length(tInt))
+tInd <- rep(tInt, each = length(ll[1]:ur[1]) * length(ll[2]:ur[2]))
+xytIndvalue <- cbind(xInd, yInd, tInd, d)
+
+# 6 - Change array' indexes for WGS84 coords (This needs the functions below UTIL)
+trans <- Wgs84grid25Todd(xInd, yInd)
+lon <- trans[[1]]
+lat <- trans[[2]]
+xytvalue <- cbind(lon, lat, tInd, d)
+head(xytvalue)
+
+# 7 - Plot data (one day)
+day <- xytvalue[1,3]# Picks the first day in the array
+#Can factors be used to get the list of days?
+dataday <- xytvalue[xytvalue[, "tInd"] == day,] # Select a single day of the data
+dataday.df <- as.data.frame(dataday)
+dataday.df <- na.omit(dataday.df) # Removes rows with NAs
+plot(SpatialPoints(dataday.df[c(1:2)]), pch = 2)#Does it look like Greece now?
+coords <-dataday.df[,c(1:2)]
+data <- dataday.df[,c(3:4)]
+wgs84 <- CRS("+proj=longlat +datum=WGS84")
+dataday.spdf <- SpatialPointsDataFrame(coords = coords, data = data, proj4string = wgs84)
+summary(dataday.spdf)
+spplot(dataday.spdf, "d", key.space = "left")#At last, it looks like Greece!!!
+
+*****************************
+#Save in csv file and plot
+*****************************
+#dataday.df_new<-matrix(c(dataday.spdf$lon, dataday.spdf$lat, dataday.spdf$tInd, dataday.spdf$d),ncol=4)
+setwd("C:\\")
+write.csv(dataday.df, file = "dataday.df_new.csv",row.names=FALSE)
+
+dataday.df_new<- read.csv("dataday.df_new.csv", header=TRUE)
+
+#Raster
+library(raster)
+library(rgdal)
+coordinates(dataday.df_new)=~lon+lat
+proj4string(dataday.df_new)=CRS("+proj=longlat +datum=WGS84") 
+data_mth = spTransform(dataday.df_new,CRS("+proj=longlat +datum=WGS84"))
+gridded(dataday.df_new) = TRUE
+gridded(dataday.df_new) = TRUE
+plot(dataday.df_new)
+ras = raster(dataday.df_new)
+projection(ras) = CRS("+proj=longlat +datum=WGS84")
+hasValues(ras)
+res(ras)
+dim(ras)
+xmax(ras)
+ymin(ras)
+plot(ras,main="raster")
+*****************************
+
+#################
+#Plot month Data#
+#################
+#Plot data
+month <- xytvalue[1:nrow(xytvalue),3]# Picks the first month in the array
+#Can factors be used to get the list of days?
+datamonth <- xytvalue[xytvalue[, "tInd"] == month,] # Select a single day of the data
+datamonth.df <- as.data.frame(datamonth)
+datamonth.df <- na.omit(datamonth.df) # Removes rows with NAs 
+#plot(SpatialPoints(dataday.df[c(1:2)]), pch = 2)#Does it look like Greece now?
+coords <-datamonth.df[,c(1:2)]
+data <- datamonth.df[,c(3:4)]
+wgs84 <- CRS("+proj=longlat +datum=WGS84")
+datamonth.spdf <- SpatialPointsDataFrame(coords = coords, data = data, proj4string = wgs84)
+summary(datamonth.spdf)
+spplot(datamonth.spdf, "d", key.space = "left")#At last, it looks like Greece!!!
+
+#Export month data in .scv format 
+library(rgdal)
+library(raster)
+setwd("C:\\")
+#datamonth
+datamonth.df
+head(datamonth.df)
+write.csv(datamonth.df, file = "jan03.csv",row.names=FALSE)
+jan03 <- read.csv("jan03.csv", header=TRUE)
+
+#Monthly: calculate the average of each point (to find the monthly value) 
+library(sp)
+jan03
+head(jan03)
+number<-nrow(jan03) #number of whole month data
+
+#Find the number points (coordinates rows):
+coords <-dataday.df[,c(1:2)]
+head(coords)
+nrow(coords) #number or points 
+#coords[302,1]
+
+#create table for storing the rain month data (length=points amount)
+k<-1
+rain2003010<-c(1:nrow(coords))
+for(k in 1:nrow(coords)) {
+  rain2003010[k]<-0}
+rain2003010
+
+#Create table for storing the amount of measurments for each point (length=points amount)
+k<-1
+divide<-c(1:nrow(coords))
+for(k in 1:nrow(coords)) {
+  divide[k]<-0}
+divide
+
+divide01<-0
+dataRain<-0
+dataRain$rain<-0
+dataRain$date<-0
+dataRain$lon<-0
+dataRain$lat<-0
+number<-nrow(jan03)
+i=1
+j=1
+for(j in 1:nrow(coords)) {
+  for(i in 1:number) {
+  #if (any(jan03$tInd[i]>=20030101))
+    if(jan03$lon[i]==coords[j,1])
+      if(jan03$lat[i]==coords[j,2])
+        if(jan03$lon[i]==coords[j,1])
+        
+        {
+          rain2003010[j]= jan03$d[i]+rain2003010[j]
+          #divide01<-divide01+1
+          dataRain$rain[j]<-rain2003010[j]
+          dataRain$lon[j]<-coords$lon[j]
+          dataRain$lat[j]<-coords$lat[j]
+         
+          #dataRain$rain_2003[i]=dataRain$rain[i]/divide01
+          divide01<-divide01+1
+          divide[j]<-divide01
+          
+        }
+    i=i+1 
+  }
+  j=j+1
+  divide01<-0
+  #dataRain$date[i]<-jan03$tInd[i]
+  }
+
+#Check if you add all data nrow(jan03)
+i=1
+check<-0
+for(i in 1:nrow(coords)) {
+  check<-divide[i]+check
+  i=i+1
+}
+check #right
+
+#Divide pointData_sum/pointData_amound:
+dataRain$rain
+divide
+
+i=1
+dataRain$rainfall<-c(1:nrow(coords))
+for(i in 1:nrow(coords)) {
+  dataRain$rainfall[i]<-0}
+dataRain$rainfall
+
+
+i=1
+  for(i in 1:length(divide)) {
+    dataRain$rainfall[i]<-dataRain$rain[i]/divide[i]
+  }
+i=i+1
+#dataRain$rainfall: is the rainfall for each point in this month
+dataRain$rainfall
+
+#Create date column
+i=1
+dataRain$date<-c(1:nrow(coords))
+for(i in 1:nrow(coords)) {
+  dataRain$date[i]<-"January_2003"}
+dataRain$date
+
+#Insert date, lon, lat, rain data in one table (mat)
+mat <- matrix(c( dataRain$lon,dataRain$lat,dataRain$rainfall), ncol=3)
+mat <- as.data.frame(mat)
+colnames(mat, do.NULL = FALSE)
+colnames(mat) <- c("lon","lat","rain_mm") #change columns names
+colnames(mat)
+mat
+
+#SAVE (mat) data in Excel:
+setwd("C:\\r_Jan03")
+mat
+head(mat)
+write.csv(mat, file = "jan03_R.csv", row.names=FALSE)
+data_mth <- read.csv("jan03_R.csv", header=TRUE)
+
+
+#Raster
+coordinates(data_mth)=~lon+lat
+proj4string(data_mth)=CRS("+proj=longlat +datum=WGS84") 
+data_mth = spTransform(data_mth,CRS("+proj=longlat +datum=WGS84"))
+gridded(data_mth) = TRUE
+gridded(data_mth) = TRUE
+plot(data_mth)
+r = raster(data_mth)
+projection(r) = CRS("+proj=longlat +datum=WGS84")
+hasValues(r)
+res(r)
+dim(r)
+xmax(r)
+ymin(r)
+plot(r,main="raster")
+
+#http://cran.r-project.org/web/packages/raster/vignettes/Raster.pdf
+writeRaster(r,"rain200301.tif", overwrite=TRUE)
+
+
+#*******************************************
+# UTIL
+#*******************************************
+
+# Transforms longitude and latitude to BLISSR indexes in the 0.25 grid in WGS84
+#
+# @param lon Numeric. WGS84 longitude 
+# @param lat Numeric. WGS84 latitude
+# @return A numeric vector with two integers: The indexes in the X and Y axes
+ddToWgs84grid25 <- function(lon, lat){
+  xIndex <- trunc(719.5 + lon/0.25)
+  yIndex <- trunc(359.5 + lat/0.25)
+  res <- list(xIndex,yIndex)
+  return (res)
+}
+
+# Transforms BLISSR indexes to longitude & latitude of the 0.25 grid in WGS84
+#
+# @param xIndex Index of the column
+# @param yIndex Index of the row
+# @return A numeric vector
+Wgs84grid25Todd <- function(xIndex, yIndex){
+  lon <- 0.25 * (xIndex - 719.5)
+  lat <- 0.25 * (yIndex - 359.5)
+  res <- list(lon, lat)
+  return(res)
+}
+
+# Transforms a date interval to a BLISS date interval
+#
+# @param from Character representation of a starting date
+# @param to Character representation of a finish date 
+# @return Numeric. Vector of dates in BLISS format
+dateInt2tInd <- function(from, to){
+  start <- as.Date(from)
+  finish <- as.Date(to)
+  int <-strsplit(x = as.character(seq(start, finish, "days")), split = "-")
+  res <- as.numeric(unlist(lapply(int, paste, collapse = "")))
+  return(res)
+}
+
+bliss2date <- function(tIndex){
+  tmp <- as.character(tIndex)
+  y <- substr(tmp, 1, 4)
+  m <- substr(tmp, 5, 6)
+  d <- substr(tmp, 7, 8)
+  res <- cbind(y,m,a)
+}
+
+
+#aql <- paste("SELECT * FROM ", arrayname, " WHERE i >= ", ll[1], " AND i <= ", ur[1], " AND j >= ", ll[2], " AND j <= ", ur[2], " AND t >= ", fromDate, " AND t <= ", toDate, sep = "")
+
