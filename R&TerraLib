@@ -8,7 +8,7 @@ library(sp)
 require(aRT) #The aRT package provides a direct runtime link of R to TerraLib DB storing and visualizing data in TerraView
 
 # Set work directory where shape files are saved
-setwd("C:\\Users\\...")  #Set Work Directory, note / instead of \ in windows 
+setwd("C:\\")  #Set Work Directory, note / instead of \ in windows 
 
 # DataBase connection
 con=openConn(user = "root", host = "localhost", pass = "your_pass", dbms= "mysql")
@@ -122,7 +122,7 @@ codes<-data.frame(id, codes) # color
 codes
 names(codes)
 
-#setwd("C:\\Users\\LandUse") 
+#setwd("C:\\") 
 #codes<-read.table("codes_LandUse.csv", sep=",", header=T)
 
 #Give color to polygons based on Corine codes 
