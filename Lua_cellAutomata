@@ -1,0 +1,499 @@
+--Krathis
+
+csQ = CellularSpace{
+ dbType = "MySQL", 
+ host = "localhost", 
+ database = "greece", -- DB name
+ user = "root", 
+ password = "password", 
+ layer = "DTM_wgs84",
+ theme = "Cells_100x100m",
+ 
+--select = {"Average_Spot", "Geology", "Temp200301","Temp200302" , "Temp200303", "Temp200304", "rain200301", "rain200302", "rain200303", "rain200304", "river"}, 
+ --where = "mask <> ‘noData’" 
+}
+
+csQ:load()
+
+--for time = 1, 1 do
+-- ...
+--csQ:save(time, "water", {"water"})
+--end
+
+
+cellSpaceSize = 100 * 100; -- m2
+K = 0;               -- infiltration coefficient, not used in this script
+FINAL_TIME = 28 ; 
+HEIGHT= "Average_Spot"
+river = "Vector_Segments"
+rain200301 = "rain200301"
+rain200302 = "rain200302"
+rain200303 = "rain200303"
+rain200304 = "rain200304"
+
+--(k, n, g) coefficients control the slope of the hydrograph during the melting season 
+k = 1.2 -- calibration of the snow melt rate coefficients
+n = 0.15 -- calibration of the snow melt rate coefficients
+g = 1 -- calibration of the snow melt rate coefficients
+
+ku = 0.08 --* 31 -- Uppet recession coefficien (per month)
+kt = 0.03 --* 31 -- Lower recession coefficien (per month)
+a2 = 0.7 -- 70% water from Lower to the Total karst
+a1 = 0.3 -- 30% water from Upper to the Total karst
+--e = -- e*Ak = 42.7 km2, 
+
+--for i=1, 4 do
+	basin_water200301=0
+	basin_water200302=0
+	basin_water200303=0
+	basin_water200304=0
+	basin_water200310=0
+	basin_water200311=0
+	basin_water200312=0
+	sum_rainfall200301 = 0
+	sum_rainfall200302 = 0
+	sum_rainfall200303 = 0
+	sum_rainfall200304 = 0
+	sum_rainfall200310 = 0
+	sum_rainfall200311 = 0
+	sum_rainfall200312 = 0
+	sum = 0
+	
+	basin_temp200301=0
+	basin_temp200302=0
+	basin_temp200303=0
+	basin_temp200304=0
+	basin_temp200310=0
+	basin_temp200311=0
+	basin_temp200312=0
+	sumtemp = 0
+	--for i = 1, 15345 do
+		--att = "rain"..i
+		--att2= "basin_water"..i
+
+		forEachCell(csQ, function(cell)
+			sum_rainfall200301 = sum_rainfall200301 + cell.rain200301 
+			basin_water200301 =  sum_rainfall200301 * 0.001
+			basin_temp200301 = basin_temp200301 + cell.Temp200301
+			
+			sum_rainfall200302 = sum_rainfall200302 + cell.rain200302 
+			basin_water200302 =  sum_rainfall200302* 0.001
+			basin_temp200302 = basin_temp200302 + cell.Temp200302
+			
+			sum_rainfall200303 = sum_rainfall200303 + cell.rain200303 
+			basin_water200303 =  sum_rainfall200303* 0.001
+			basin_temp200303 = basin_temp200303 + cell.Temp200303
+			
+			sum_rainfall200304 = sum_rainfall200304 + cell.rain200304 
+			basin_water200304 =  sum_rainfall200304* 0.001
+			basin_temp200304 = basin_temp200304 + cell.Temp200304
+			
+			sum_rainfall200310 = sum_rainfall200310 + cell.rain200310 
+			basin_water200310 =  sum_rainfall200310* 0.001
+			basin_temp200310 = basin_temp200310 + cell.Temp200310
+			
+			sum_rainfall200311 = sum_rainfall200311 + cell.rain200311 
+			basin_water200311 =  sum_rainfall200311* 0.001
+			basin_temp200311 = basin_temp200311 + cell.Temp200311
+			
+			sum_rainfall200312 = sum_rainfall200312 + cell.rain200312 
+			basin_water200312 =  sum_rainfall200312* 0.001
+			basin_temp200312 = basin_temp200312 + cell.Temp200312
+		end)
+		sum = basin_water200301 + basin_water200302 + basin_water200303 + basin_water200304 + basin_water200310 + basin_water200311 + basin_water200312
+		temp1 = basin_temp200301 / 15345
+		temp2 = basin_temp200302 / 15345
+		temp3 = basin_temp200303 / 15345
+		temp4 = basin_temp200304 / 15345
+		temp10 = basin_temp200310 / 15345
+		temp11 = basin_temp200311 / 15345
+		temp12 = basin_temp200312 / 15345
+		
+--end
+--end
+print("basin_water_January03: "..basin_water200301)
+print("Temp_January03: "..temp1)
+print("....")
+
+print("basin_water_Febuary03: "..basin_water200302)
+print("Temp_Febuary03: "..temp2)
+print("....")
+
+print("basin_water_March03: "..basin_water200303)
+print("Temp_March03: "..temp3)
+print("....")
+
+print("basin_water_April03: "..basin_water200304)
+print("Temp_April03: "..temp4)
+print("....")
+
+print("basin_water_October03: "..basin_water200310)
+print("Temp_October03: "..temp10)
+print("....")
+
+print("basin_water_November03: "..basin_water200311)
+print("Temp_November03: "..temp11)
+print("....")
+
+print("basin_water_December03: "..basin_water200312)
+print("Temp_December03: "..temp12)
+print("....")
+
+print("basin_water_200301-200304: "..sum)
+
+
+		
+csQ:createNeighborhood{
+  strategy = "3x3", --  A 3x3(Couclelis) Neighborhood
+    filter = function(cell, neighbor)
+    if (cell[HEIGHT] ~= -1) then
+       return neighbor[HEIGHT]<cell[HEIGHT] and cell ~= neighbor -- cells with [HEIGHT] < neighbor[HEIGHT]  
+    end
+       end
+}
+
+
+
+csQ:synchronize()
+
+
+----------------------------------------------------------------
+-- Creates legends and observers
+
+heightLeg = Legend{
+	-- Attribute name:  height
+	type = "number",
+	grouping = "equalsteps",
+	slices = 100,
+	precision = 1,
+	maximum = 2200, 
+	minimum = 3,
+	colorBar = {
+		{color = "white", value = 3},
+		{color = "black", value = 2200}
+	}
+}
+
+waterLeg = Legend{
+	type = "number",
+	grouping = "equalsteps",
+	slices = 5,
+	precision = 3,
+	maximum = 30,
+	minimum = 0,
+	colorBar = {
+
+		{color = {173, 216, 230}, value = 0},                     
+		{color =  { 0, 255, 255}, value = 30}  -- { 0, 255, 255}, value = 0.30}    -- {color =  "blue" , value = 0.30}            
+	}
+}
+
+riverLeg = Legend{
+	type = "number",
+	grouping = "equalsteps",
+	slices = 1,
+	precision = 1,
+	maximum = 4,
+	minimum = 0,
+	colorBar = {
+
+		{color = {173, 216, 230}, value = 0},                     
+		{color =  "blue" , value = 4}    -- {color =  "blue" , value = 30}            
+	}
+}
+
+SegmentLeg = Legend{
+	type = "number",
+	grouping = "equalsteps",
+	slices = 1,
+	precision = 0,
+	maximum = 0.34,
+	minimum = 0,
+	colorBar = {
+
+		{color = {173, 216, 230}, value = 0.01},
+		{color = {165, 42, 42}, value = 0.02}, 
+		{color = {255, 127, 80}, value = 0.03},
+		{color = {100, 149, 237}, value = 0.04},
+		{color = {255, 248, 220}, value = 0.05},
+		{color = {220, 20, 60}, value = 0.06},
+		{color = {184, 134, 11}, value = 0.07},
+		{color = {189, 183, 107}, value = 0.08},
+		{color = { 85, 107, 47}, value = 0.09},
+		{color = {255, 0, 255}, value = 0.10},
+		{color = {173, 255, 47}, value = 0.11},
+		{color = {255, 105, 180}, value = 0.12},
+		{color = {255, 255, 240}, value = 0.13},
+		{color =  {124, 252, 0}, value = 0.14},
+		{color = {119, 136, 153}, value = 0.15},
+		{color = {255, 0, 255}, value = 0.16},
+		{color = { 0, 0, 205}, value = 0.17},
+		{color = {147, 112, 219}, value = 0.18},
+		{color = { 72, 209, 204}, value = 0.19},
+		{color = {253, 245, 230}, value = 0.20},
+		{color = {255, 165, 0}, value = 0.21},
+		{color = {255, 239, 213}, value = 0.22},
+		{color = {188, 143, 143}, value = 0.23},
+		{color = { 46, 139, 87},value = 0.24},
+		{color = {112, 128, 144}, value = 0.25},
+		{color = { 0, 255, 127}, value = 0.26},
+		{color = { 0, 128, 128}, value = 0.27},
+		{color = {255, 99, 71}, value = 0.28},
+		{color = { 64, 224, 208}, value = 0.29},
+		{color = {238, 130, 238}, value = 0.30},
+		{color =  {245, 222, 179}, value = 0.31},
+		{color = {154, 205, 50}, value = 0.32},
+		{color = {255, 255, 255}, value = 0.33},                     
+		{color =  {173, 216, 230} , value = 0.34}    -- {color =  "blue" , value = 30}            
+	}
+}
+
+--forEachCell(csQ, function(cell)
+--	if ((cell.x == 125) and (cell.y == 1) ) then
+
+		--textScreenObserver = Observer{ subject = cell, type = "textscreen", attributes={ "water", HEIGHT }}
+		--logFileObserver = Observer{ subject = cell, type = "logfile",attributes={"water", HEIGHT} } --???
+	    --tableObserver = Observer{ subject = cell, type = "table",attributes={},xLabel = "-- VALUES --", yLabel ="-- ATTRS --"} --???
+		--udpSenderObserver = Observer{ subject = cell, type = "udpsender", attributes = { "water", HEIGHT} } --???
+--		chartObserver = Observer{ subject = cell, type = "chart",attributes={"water"}, title="GraphicTitle", curveLabel="CurveTitle", yLabel="YLabel", xLabel="XLabel"}		
+		
+--		cell:notify()
+--	end
+--end)
+
+
+
+
+
+--Observers
+obs1 = Observer{
+	subject = csQ,
+	type = "map",
+	attributes = {river,"water"},
+	legends= {riverLeg,waterLeg}
+}
+
+obs1 = Observer{
+	subject = csQ,
+	type = "image",
+	attributes = {river,"water"},
+	legends= {riverLeg,waterLeg}
+}
+
+obs3 = Observer{
+	subject = csQ,
+	type = "map",
+	attributes = {HEIGHT, "water"},
+	legends= {heightLeg, waterLeg}
+}
+
+
+--obs4 = Observer{
+--	subject = csQ,
+--	type = "map",
+--	attributes = { "Segments", "water"},
+--	legends= {SegmentLeg, waterLeg}
+--}
+
+
+obs5 = Observer{
+	subject = csQ.cells[1198],
+	type = "chart",
+               title = "water",
+               yLabel = "Water (mm)",
+               xLabel = "Time (time)",
+               curveLabels = {"water_flow"},                                    
+               attributes = {"water"} 
+}
+----------------------------------------------------------------
+
+csQ:notify()
+
+-- Model initializaion
+
+
+--for i = 1, 4 do
+-- attRain = "rain20030"..i
+-- attTemp = "Temp20030"..i
+
+forEachCell(csQ, function(cell)
+       
+        cell.inf = 0
+        cell.inf1 = 0
+        cell.inf2 = 0
+        
+        cell.outf = 0
+        cell.outf1 = 0
+        cell.outf2 = 0
+        
+        cell.HEIGHT = cell.Average_Spot
+		cell.temp = cell.Temp200301 --
+		cell.geol = cell.Geology
+		cell:notify()
+		
+        --rain
+        if (cell[temp] ~= 50) and (cell.rain200301 ~= -1) then
+        --if cell.rain200301 >-1  then
+               cell.water = cell.rain200301 --* 0.001 -- mm to meters
+           elseif (cell[temp] == 50) or (cell.rain200301 == -1) then--
+               cell.rain200301 = 0 --
+               cell.water = 0
+        end
+        
+      
+                 	
+		--snow melting
+		if (cell.rain200301 == 0 ) then --
+		             cell.Ms = (k * (1.8 * cell.temp)^(n+1) / 1000) --* 31 -- 31 to get the monthly value
+		elseif (cell.rain200301 > 0 ) then --
+		              cell.Ms = (g * ((0.07 * cell.water + 0.074) * cell.temp * 1.8 + 0.05) * 0.254/1000)--*31 -- 31 to get the monthly value, Rain in mm... MS = mm/month
+		end
+		
+		
+		
+		cell:notify()
+end)
+--end
+
+rainflowTime = 0
+
+outFlow = 0
+outflow1 = 0
+outflow2 = 0
+
+inFlow = 0
+inflow1 = 0
+inflow2 = 0
+
+FlowRiver = 0
+
+-- Model run
+ini = os.time()
+for t = 1, FINAL_TIME do -- duration of water flowing
+rainflowTime = rainflowTime + 1
+forEachCell(csQ, function(cell)
+
+              countNeigh = cell:getNeighborhood():size()
+              --cell.water = cell.past.water + cell.water 
+
+		          if ((cell.geol >=1) and (cell.geol < 3) or (cell.geol > 3) )then -- No karstic area (2= phyllite, 1= sediment, 4= flysch)
+		          cell.water = cell.past.water + cell.water 
+		             if (cell.temp <= 3) then
+		                 cell.water =  (1 * (cell.water + cell.Ms)) --*  10000 -- e*Ak = 42.7 km^2, 100*100m^2 = 0.01km^2, a1= 30%
+			             forEachNeighbor(cell, function(cell, neigh)				         	
+				         neigh.water = neigh.past.water + cell.water /countNeigh			
+			             end)
+			         elseif ((cell.temp > 3) and (cell.temp <= 12.3)) then
+			             forEachNeighbor (cell, function (cell, neigh)
+			             neigh.water = neigh.past.water + cell.water /countNeigh    
+			             end)
+			      end
+			      end
+			        
+			      if (cell.geol == 3)  then	    
+		            if (cell.temp <= 3) then -- Karsic system (3= limestone)              		           
+		               cell.inf1 =  (1-a1) * (cell.water + cell.Ms) --* 10000--0.01 -- e*Ak = 42.7 km^2, 100*100m^2 = 0.01km^2 = 10000 * 10^6 mm^2, a1= 30%
+		               cell.inf2 =  a1 * (cell.water + cell.Ms) + a2 * cell.inf1 --cell.inf2 =  a1 * (cell.water + cell.Ms) * 10000 + a2 * cell.inf1
+		               cell.inf = cell.inf2 -- cell.inf = cell.inf1 +cell.inf2
+		             
+		               cell.outf1 = cell.inf1 * (1 - 10^((-ku)*cell.temp))- a2 * cell.inf1
+		               cell.outf2 = cell.inf1 * (1 - 10^((-kt)*cell.temp))
+		               cell.out = cell.outf1 + cell.outf2
+		               cell.water = cell.inf - cell.out + cell.past.water
+		                    forEachNeighbor(cell, function(cell, neigh)
+		                        neigh.water = neigh.past.water + cell.water/countNeigh
+		                    end)
+		                    
+		             if ((cell.temp > 3) and (cell.temp <= 12.3)) then
+		                cell.inf1 = (1-a1) * cell.water 
+		                cell.inf2 =  a1 * cell.water + a2 * cell.inf1
+		                cell.inf = cell.inf2 -- cell.inf = cell.inf1 +cell.inf2
+		             
+		                cell.outf1 = cell.inf1 * (1 - 10^((-ku)*cell.temp))- a2 * cell.inf1
+		                cell.outf2 = cell.inf2 * (1 - 10^((-kt)*cell.temp))
+		                cell.out = cell.outf1 + cell.outf2 
+		                cell.water = cell.inf - cell.out + cell.past.water
+		                     forEachNeighbor(cell, function(cell, neigh)
+		                        neigh.water = neigh.past.water + cell.water/countNeigh 
+		                     end)
+		                     
+		              end  
+		                        
+		          end
+		          
+		      end
+		      
+		     if (t >= 2) then
+                c1 = csQ.cells[12593] --c1 = csQ.cells[1198]
+                --c2 = csQ.cells[1202]
+                inflow1 = c1.water  + inflow1
+                --outflow2 = c2.water  + c2.past.water + outflow2
+                
+                
+                i1 = csQ.cells[12593] --i1 = csQ.cells[1190]
+                --i2 = csQ.cells[1199]
+                outflow1  = i1.past.water +  outflow1
+                --inflow2 = i2.water + i2.past.water +  inflow2
+                --inFlow = inflow1 + inflow2
+		      	
+                --FlowRiver = inFlow - outFlow
+               end
+		end)
+	outFlow =  outflow1 --+  outflow2
+	inFlow = inflow1 --+ inflow2
+	FlowRiver = inFlow - outFlow	      	
+    
+	
+	print("Time:",  rainflowTime)			
+	csQ:synchronize()
+	csQ:notify()
+	print("inFlow:"..inFlow)
+	print("outFlow:"..outFlow)
+	print("FlowRiver by step:"..FlowRiver)
+end
+	
+	
+
+
+-------------------------------------------
+--Trajectory: River
+--trajRiver = Trajectory{ 
+ --  target = csQ, 
+--   select = function(cell)
+--     return cell.cover == "river"
+ --    end,
+ --    function (c1)
+ --    return c1.river > 0
+ --    end
+--}     
+--------------------------------------------
+--printTraj = function(traj)  
+
+--str = ""
+--  forEachCell(trajRiver, function(cell)
+ -- str=str.." "..cell.river
+--    cell.trajRiver = cell.water + cell.past.water
+ --  total = cell.trajRiver + cell.past.trajRiver
+ --   end)
+    --print(total)
+---end
+-------------------------------------------
+
+
+
+t = Timer{
+	Event{time = 1, action = function(event)
+		print("Time:", event:getTime()) io.flush()
+		--printTraj(trajRiver)
+		--FlowRiver = inFlow - outFlow
+		FlowRiver_Final = FlowRiver * 0.01 * 100 * 100 -- m^3
+		print("FlowRiver_Final:"..FlowRiver_Final)
+		--csQ:notify()
+	end}
+}
+
+
+
+t:execute(1)
+
+
