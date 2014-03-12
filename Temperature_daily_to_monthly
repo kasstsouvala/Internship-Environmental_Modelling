@@ -1,0 +1,68 @@
+library (raster)
+
+setwd("C:\\Data")
+data <- read.csv("Data_Greece.csv",header=TRUE)  
+head(data)
+
+
+colnames(data) <- c("date","temp","cloud","rain", "solar", "wind","humidity", "dewp", "dew_araxos")
+head(data)
+
+#add the values of each day of one month
+datat<-0
+datat$temp<-0
+datat$date<-0
+temp=0
+n=0
+number<-nrow(data)
+i=1
+  for(i in 1:number) {
+    if(data$date[i]=="200410") #change the date. Use the title of the csv file.     
+        {
+          temp= temp+data$tem[i]
+          n=n+1
+        }
+    i=i+1 
+
+}
+temp
+n
+
+mean_200301<-temp/n
+mean_200302<-temp/n
+mean_200303<-temp/n
+mean_200304<-temp/n
+mean_200305<-temp/n
+mean_200306<-temp/n
+mean_200307<-temp/n
+mean_200308<-temp/n
+mean_200309<-temp/n
+mean_200310<-temp/n
+mean_200311<-temp/n
+mean_200312<-temp/n
+
+mean_200401<-temp/n
+mean_200402<-temp/n
+mean_200403<-temp/n
+mean_200404<-temp/n
+mean_200405<-temp/n
+mean_200406<-temp/n
+mean_200407<-temp/n
+mean_200408<-temp/n
+mean_200409<-temp/n
+mean_200410<-temp/n
+
+temp_akrata<-matrix(c(mean_200301,mean_200302,mean_200303,mean_200304,mean_200305,mean_200306,mean_200307,mean_200308,mean_200309,mean_200310,mean_200311,mean_200312,mean_200401,mean_200402,mean_200403,mean_200404,mean_200405,mean_200406,mean_200407,mean_200408,mean_200409,mean_200410), ncol=1)
+date<-c(1:nrow(temp_akrata))
+date_akrata<-matrix(c(200301,200302,200303,200304,200305,200306,200307,200308,200309,200310,200311,200312,200401,200402,200403,200404,200405,200406,200407,200408,200409,200410), ncol=1)
+data_akrata<-matrix(c(temp_akrata,date_akrata),ncol=2)
+data_akrata
+
+colnames(data_akrata) <- c("tempAkr","data")
+head(data_akrata)
+
+setwd("C:\\Data")
+write.csv(data_akrata, file = "data_akrata.csv", row.names=FALSE)
+data_akrata <- read.csv("data_akrata.csv", header=TRUE)
+head(data_akrata)
+
